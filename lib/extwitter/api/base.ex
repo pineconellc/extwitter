@@ -90,9 +90,19 @@ defmodule ExTwitter.API.Base do
     "https://upload.twitter.com/#{path}"
   end
 
+  defmodule ResponseParsingError do
+    defexception [:message, :response, :body, :header]
+  end
+
   def parse_result(result) do
-    {:ok, {_response, header, body}} = result
-    verify_response(ExTwitter.JSON.decode!(body), header)
+    {:ok, {response, header, body}} = result
+
+    try do
+      verify_response(ExTwitter.JSON.decode!(body), header)
+    rescue
+      e in [Poison.SyntaxError] ->
+        raise ResponseParsingError, message: e.message, response: response, body: body, header: header
+    end
   end
 
   defp verify_response(body, header) do
